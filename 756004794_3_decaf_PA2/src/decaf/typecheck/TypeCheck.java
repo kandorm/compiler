@@ -22,6 +22,7 @@ import decaf.error.DecafError;
 import decaf.error.FieldNotAccessError;
 import decaf.error.FieldNotFoundError;
 import decaf.error.IncompatBinOpError;
+import decaf.error.IncompatTerOpError;
 import decaf.error.IncompatUnOpError;
 import decaf.error.NotArrayError;
 import decaf.error.NotClassError;
@@ -63,6 +64,11 @@ public class TypeCheck extends Tree.Visitor {
 	@Override
 	public void visitBinary(Tree.Binary expr) {
 		expr.type = checkBinaryOp(expr.left, expr.right, expr.tag, expr.loc);
+	}
+	
+	@Override
+	public void visitTernary(Tree.Ternary expr) {
+		expr.type = checkTernaryOp(expr.left, expr.middle, expr.right, expr.tag, expr.loc);
 	}
 
 	@Override
@@ -641,6 +647,33 @@ public class TypeCheck extends Tree.Visitor {
 		return returnType;
 	}
 
+	private Type checkTernaryOp(Tree.Expr left, Tree.Expr middle, Tree.Expr right, int op, Location location) {
+		left.accept(this);
+		middle.accept(this);
+		right.accept(this);
+		
+		checkTestExpr(left);
+		boolean compatible = false;
+		Type returnType = BaseType.ERROR;
+		switch(op) {
+			case Tree.COND:
+				compatible = middle.type.equal(right.type);
+				if(compatible)
+					returnType = middle.type;
+				break;
+			default:
+				break;
+		}
+		
+		if(!middle.type.equal(BaseType.ERROR) && 
+		   !right.type.equal(BaseType.ERROR) &&
+		   !compatible) {
+				issueError(new IncompatTerOpError(location, middle.type.toString(), 
+						right.type.toString()));
+		}
+		return returnType;
+		
+	}
 	private void checkTestExpr(Tree.Expr expr) {
 		expr.accept(this);
 		if (!expr.type.equal(BaseType.ERROR) && !expr.type.equal(BaseType.BOOL)) {

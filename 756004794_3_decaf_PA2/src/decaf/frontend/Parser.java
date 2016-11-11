@@ -1198,7 +1198,7 @@ break;
 case 71:
 //#line 348 "Parser.y"
 {
-                		yyval.expr = new Tree.Ternary(Tree.COND, val_peek(4).expr, val_peek(2).expr, val_peek(0).expr, val_peek(3).loc);
+                		yyval.expr = new Tree.Ternary(Tree.COND, val_peek(4).expr, val_peek(2).expr, val_peek(0).expr, val_peek(4).loc);
                 	}
 break;
 case 72:
