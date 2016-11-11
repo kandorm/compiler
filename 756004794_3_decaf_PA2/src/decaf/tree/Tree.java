@@ -990,6 +990,9 @@ public abstract class Tree {
     		case GE:
     			binaryOperatorPrintTo(pw, "geq");
     			break;
+    		case PCLONE:
+    			binaryOperatorPrintTo(pw, "pclone");
+    			break;
     		}
     	}
     }

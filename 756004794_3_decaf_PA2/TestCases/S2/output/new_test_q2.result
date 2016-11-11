@@ -1,0 +1,13 @@
+*** Error at (10,10): incompatible operands: class : A unknow class : B
+*** Error at (11,10): incompatible operands: class : B unknow class : A
+*** Error at (12,10): incompatible operands: class : A unknow class : C
+*** Error at (13,6): incompatible operands: class : A = bool
+*** Error at (13,10): incompatible operands: class : C unknow class : D
+*** Error at (14,6): incompatible operands: class : A = bool
+*** Error at (14,10): incompatible operands: class : D unknow class : E
+*** Error at (15,6): incompatible operands: class : A = bool
+*** Error at (15,10): incompatible operands: class : E unknow class : E
+*** Error at (16,6): incompatible operands: class : A = bool
+*** Error at (16,10): incompatible operands: class : B unknow class : E
+*** Error at (17,10): incompatible operands: class : E unknow class : B
+*** Error at (17,20): incompatible operands: bool unknow class : E
