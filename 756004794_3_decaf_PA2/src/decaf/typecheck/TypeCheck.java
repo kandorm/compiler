@@ -595,6 +595,8 @@ public class TypeCheck extends Tree.Visitor {
 				return left.type;
 			case Tree.MOD:
 				return BaseType.INT;
+			case Tree.PCLONE:
+				return BaseType.ERROR;
 			default:
 				return BaseType.BOOL;
 			}
@@ -636,6 +638,18 @@ public class TypeCheck extends Tree.Visitor {
 					&& right.type.equal(BaseType.BOOL);
 			returnType = BaseType.BOOL;
 			break;
+		case Tree.PCLONE:
+			if(left.type.isClassType() && right.type.isClassType()) {
+				ClassType tempType = (ClassType)left.type;
+				while(tempType != null) {
+					if(right.type.compatible(tempType)) {
+						compatible = true;
+						returnType = tempType;
+						break;
+					}
+					tempType = tempType.getParentType();
+				}
+			}
 		default:
 			break;
 		}

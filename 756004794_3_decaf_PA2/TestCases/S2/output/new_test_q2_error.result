@@ -1,12 +1,9 @@
-*** Error at (12,10): incompatible operands: int unknow string
-*** Error at (13,10): incompatible operands: class : A unknow int
-*** Error at (14,10): incompatible operands: class : A unknow class : D
-*** Error at (15,10): incompatible operands: class : D unknow class : A
-*** Error at (16,10): incompatible operands: class : C unknow class : E
-*** Error at (17,10): incompatible operands: class : E unknow class : C
-*** Error at (18,6): incompatible operands: class : A = bool
-*** Error at (18,10): incompatible operands: class : B unknow class : C
-*** Error at (19,6): incompatible operands: class : A = bool
-*** Error at (19,10): incompatible operands: class : E unknow class : B
-*** Error at (20,6): incompatible operands: class : A = bool
-*** Error at (20,17): incompatible operands: class : B unknow class : A
+*** Error at (12,10): incompatible operands: int << string
+*** Error at (13,10): incompatible operands: class : A << int
+*** Error at (14,10): incompatible operands: class : A << class : D
+*** Error at (15,10): incompatible operands: class : D << class : A
+*** Error at (16,10): incompatible operands: class : C << class : E
+*** Error at (17,10): incompatible operands: class : E << class : C
+*** Error at (18,15): incompatible operands: class : B << class : D
+*** Error at (19,10): incompatible operands: class : E << class : B
+*** Error at (20,10): incompatible operands: class : E << class : A

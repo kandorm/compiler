@@ -81,6 +81,8 @@ public abstract class BaseParser {
 			return ">";
 		case Tree.LT:
 			return "<";
+		case Tree.PCLONE:
+			return "<<";
 		default:
 			return "unknow";
 		}
