@@ -271,6 +271,13 @@ public class BuildSym extends Tree.Visitor {
 			whileLoop.loopBody.accept(this);
 		}
 	}
+	
+	@Override
+	public void visitRepeat(Tree.Repeat repeatLoop) {
+		if (repeatLoop.repeatStmt != null) {
+			repeatLoop.repeatStmt.accept(this);
+		}
+	}
 
 	private int calcOrder(Class c) {
 		if (c == null) {

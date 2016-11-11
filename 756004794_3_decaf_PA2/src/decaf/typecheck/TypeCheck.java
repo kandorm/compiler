@@ -20,6 +20,7 @@ import decaf.error.BadSwitchVarError;
 import decaf.error.BadTestExpr;
 import decaf.error.BreakOutOfLoopError;
 import decaf.error.ClassNotFoundError;
+import decaf.error.ContinueOutOfLoopError;
 import decaf.error.DecafError;
 import decaf.error.FieldNotAccessError;
 import decaf.error.FieldNotFoundError;
@@ -51,12 +52,15 @@ public class TypeCheck extends Tree.Visitor {
 	private ScopeStack table;
 
 	private Stack<Tree> breaks;
-
+	
+	private Stack<Tree> continues;
+	
 	private Function currentFunction;
 
 	public TypeCheck(ScopeStack table) {
 		this.table = table;
 		breaks = new Stack<Tree>();
+		continues = new Stack<Tree>();
 	}
 
 	public static void checkType(Tree.TopLevel tree) {
@@ -462,6 +466,13 @@ public class TypeCheck extends Tree.Visitor {
 			issueError(new BreakOutOfLoopError(breakStmt.getLocation()));
 		}
 	}
+	
+	@Override
+	public void visitContinue(Tree.Continue continueStmt) {
+		if (continues.empty()) {
+			issueError(new ContinueOutOfLoopError(continueStmt.getLocation()));
+		}
+	}
 
 	@Override
 	public void visitForLoop(Tree.ForLoop forLoop) {
@@ -473,10 +484,12 @@ public class TypeCheck extends Tree.Visitor {
 			forLoop.update.accept(this);
 		}
 		breaks.add(forLoop);
+		continues.add(forLoop);
 		if (forLoop.loopBody != null) {
 			forLoop.loopBody.accept(this);
 		}
 		breaks.pop();
+		continues.pop();
 	}
 
 	@Override
@@ -577,19 +590,23 @@ public class TypeCheck extends Tree.Visitor {
 	public void visitWhileLoop(Tree.WhileLoop whileLoop) {
 		checkTestExpr(whileLoop.condition);
 		breaks.add(whileLoop);
+		continues.add(whileLoop);
 		if (whileLoop.loopBody != null) {
 			whileLoop.loopBody.accept(this);
 		}
 		breaks.pop();
+		continues.pop();
 	}
 
 	@Override
 	public void visitRepeat(Tree.Repeat repeatLoop) {
 		breaks.add(repeatLoop);
+		continues.add(repeatLoop);
 		if (repeatLoop.repeatStmt != null) {
 			repeatLoop.repeatStmt.accept(this);
 		}
 		breaks.pop();
+		continues.pop();
 		checkTestExpr(repeatLoop.condition);
 	}
 
