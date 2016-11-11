@@ -13,8 +13,12 @@ import decaf.type.*;
 import decaf.scope.*;
 import decaf.symbol.*;
 import decaf.symbol.Class;
+import decaf.tree.Tree.Case;
 import decaf.tree.Tree.Continue;
+import decaf.tree.Tree.Default;
 import decaf.tree.Tree.Expr;
+import decaf.tree.Tree.Repeat;
+import decaf.tree.Tree.Switch;
 import decaf.tree.Tree.Ternary;
 import decaf.tree.Tree.Visitor;
 import decaf.utils.IndentPrintWriter;
@@ -111,7 +115,7 @@ public abstract class Tree {
      * Case parts in switch statements, of type Case.
      */
     public static final int CASE = SWITCH + 1;
-
+    
     /**
      * Synchronized statements, of type Synchonized.
      */
@@ -304,6 +308,16 @@ public abstract class Tree {
     public static final int READINTEXPR = THISEXPR + 1;
     public static final int READLINEEXPR = READINTEXPR + 1;
     public static final int PRINT = READLINEEXPR + 1;
+    
+    /**
+     * Default parts in switch statements, of type Default.
+     */
+    public static final int DEFAULT = PRINT + 1;
+    
+    /**
+     * Repeat-until loops, of type RepeatLoop.
+     */
+    public static final int REPEATLOOP = DEFAULT + 1;
     
     /**
      * Tags for Literal and TypeLiteral
@@ -550,7 +564,37 @@ public abstract class Tree {
     		}
     		pw.decIndent();
     	}
-   }
+    }
+    
+    /**
+     * A repeat loop
+     */
+    public static class Repeat extends Tree {
+    	
+    	public Tree repeatStmt;
+    	public Expr condition;
+    	
+    	public Repeat(Tree repeatStmt, Expr condition, Location loc) {
+    		super(REPEATLOOP,loc);
+    		this.repeatStmt = repeatStmt;
+    		this.condition = condition;
+    	}
+    	
+    	@Override
+        public void accept(Visitor v) {
+            v.visitRepeat(this);
+        }
+
+        @Override
+    	public void printTo(IndentPrintWriter pw) {
+    		pw.println("repeat");
+    		pw.incIndent();
+    		condition.printTo(pw);
+    		repeatStmt.printTo(pw);
+    		pw.decIndent();
+    	}
+    	
+    }
 
     /**
       * A for loop.
@@ -634,6 +678,94 @@ public abstract class Tree {
     			pw.incIndent();
     			falseBranch.printTo(pw);
     			pw.decIndent();
+    		}
+    	}
+    }
+    
+    /**
+     * A switch () {case* <default>} block.
+     */
+    public static class Switch extends Tree {
+
+    	public Expr condition;
+    	public List<Tree> caseList;
+    	public Tree defaultStmt;
+    	public LocalScope associatedScope;
+
+        public Switch(Expr condition, List<Tree> caseList, Tree defaultStmt, Location loc) {
+            super(SWITCH, loc);
+            this.condition = condition;
+            this.caseList = caseList;
+            this.defaultStmt = defaultStmt;
+        }
+
+        @Override
+        public void accept(Visitor v) {
+            v.visitSwitch(this);
+        }
+
+        @Override
+    	public void printTo(IndentPrintWriter pw) {
+    		pw.println("switch");
+    		pw.incIndent();
+    		condition.printTo(pw);
+    		for (Tree s : caseList) {
+    			s.printTo(pw);
+    		}
+    		if (defaultStmt != null) {
+    			defaultStmt.printTo(pw);
+    		}
+    		pw.decIndent();
+    	}
+    }
+    
+    public static class Case extends Tree {
+
+    	public Expr condition;
+    	public List<Tree> slist;
+
+        public Case(Expr condition, List<Tree> slist, Location loc) {
+            super(CASE, loc);
+            this.condition = condition;
+            this.slist = slist;
+        }
+
+        @Override
+        public void accept(Visitor v) {
+            v.visitCase(this);
+        }
+
+        @Override
+    	public void printTo(IndentPrintWriter pw) {
+    		pw.println("case:");
+    		pw.incIndent();
+    		condition.printTo(pw);
+    		for(Tree s : slist) {
+    			s.printTo(pw);
+    		}
+    		pw.decIndent();
+    	}
+    }
+    
+    public static class Default extends Tree {
+
+    	public List<Tree> slist;
+
+        public Default(List<Tree> slist, Location loc) {
+            super(DEFAULT, loc);
+            this.slist = slist;
+        }
+
+        @Override
+        public void accept(Visitor v) {
+            v.visitDefault(this);
+        }
+
+        @Override
+    	public void printTo(IndentPrintWriter pw) {
+    		pw.println("default:");
+    		for(Tree s : slist) {
+    			s.printTo(pw);
     		}
     	}
     }
@@ -1456,6 +1588,18 @@ public abstract class Tree {
         public void visitIf(If that) {
             visitTree(that);
         }
+        
+        public void visitSwitch(Switch that) {
+            visitTree(that);
+        }
+        
+        public void visitCase(Case that) {
+            visitTree(that);
+        }
+        
+        public void visitDefault(Default that) {
+            visitTree(that);
+        }
 
         public void visitExec(Exec that) {
             visitTree(that);
@@ -1465,6 +1609,10 @@ public abstract class Tree {
             visitTree(that);
         }
 
+        public void visitRepeat(Repeat that) {
+            visitTree(that);
+        }
+        
         public void visitContinue(Continue that) {
         	visitTree(that);
         }

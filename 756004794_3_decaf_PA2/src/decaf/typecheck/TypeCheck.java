@@ -10,11 +10,13 @@ import decaf.tree.Tree;
 import decaf.error.BadArgCountError;
 import decaf.error.BadArgTypeError;
 import decaf.error.BadArrElementError;
+import decaf.error.BadCaseLabelError;
 import decaf.error.BadLengthArgError;
 import decaf.error.BadLengthError;
 import decaf.error.BadNewArrayLength;
 import decaf.error.BadPrintArgError;
 import decaf.error.BadReturnTypeError;
+import decaf.error.BadSwitchVarError;
 import decaf.error.BadTestExpr;
 import decaf.error.BreakOutOfLoopError;
 import decaf.error.ClassNotFoundError;
@@ -487,6 +489,52 @@ public class TypeCheck extends Tree.Visitor {
 			ifStmt.falseBranch.accept(this);
 		}
 	}
+	
+	@Override
+	public void visitSwitch(Tree.Switch switchStmt) {
+		
+		if(switchStmt.condition != null) {
+			checkSwitchVar(switchStmt.condition);
+		}
+		
+		for(Tree s : switchStmt.caseList) {
+			if(s != null) {
+				s.accept(this);
+			}
+		}
+	
+		if(switchStmt.defaultStmt != null) {
+			switchStmt.defaultStmt.accept(this);
+		}
+	}
+	
+	
+	@Override
+	public void visitCase(Tree.Case caseStmt) {
+		
+		if(caseStmt.condition != null) {
+			checkCaseLabel(caseStmt.condition);
+		}
+		breaks.add(caseStmt);
+		for(Tree s : caseStmt.slist) {
+			if(s != null) {
+				s.accept(this);
+			}
+		}
+		breaks.pop();
+	}
+	
+	@Override
+	public void visitDefault(Tree.Default defaultStmt) {
+		
+		breaks.add(defaultStmt);
+		for(Tree s : defaultStmt.slist) {
+			if(s != null) {
+				s.accept(this);
+			}
+		}
+		breaks.pop();
+	}
 
 	@Override
 	public void visitPrint(Tree.Print printStmt) {
@@ -534,6 +582,17 @@ public class TypeCheck extends Tree.Visitor {
 		}
 		breaks.pop();
 	}
+
+	@Override
+	public void visitRepeat(Tree.Repeat repeatLoop) {
+		breaks.add(repeatLoop);
+		if (repeatLoop.repeatStmt != null) {
+			repeatLoop.repeatStmt.accept(this);
+		}
+		breaks.pop();
+		checkTestExpr(repeatLoop.condition);
+	}
+
 
 	// visiting types
 	@Override
@@ -693,6 +752,21 @@ public class TypeCheck extends Tree.Visitor {
 		if (!expr.type.equal(BaseType.ERROR) && !expr.type.equal(BaseType.BOOL)) {
 			issueError(new BadTestExpr(expr.getLocation()));
 		}
+	}
+	
+	private void checkSwitchVar(Tree.Expr expr) {
+		expr.accept(this);
+		if(!expr.type.equal(BaseType.ERROR) && !expr.type.equal(BaseType.INT)) {
+			issueError(new BadSwitchVarError(expr.getLocation()));
+		}
+	}
+	
+	private void checkCaseLabel(Tree.Expr expr) {
+		expr.accept(this);
+		if(!expr.type.equal(BaseType.ERROR) && ((Tree.Literal)expr).typeTag != Tree.INT) {
+			issueError(new BadCaseLabelError(expr.getLocation()));
+		}
+		
 	}
 
 }

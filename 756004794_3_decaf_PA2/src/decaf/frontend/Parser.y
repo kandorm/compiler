@@ -32,6 +32,8 @@ import java.util.*;
 %token IDENTIFIER	  AND    OR    STATIC  INSTANCEOF
 %token LESS_EQUAL   GREATER_EQUAL  EQUAL   NOT_EQUAL
 %token PCLONE
+%token SWITCH   CASE   DEFAULT
+%token REPEAT   UNTIL
 %token CONTINUE
 %token '+'  '-'  '*'  '/'  '%'  '='  '>'  '<'  '.'
 %token ','  ';'  '!'  '('  ')'  '['  ']'  '{'  '}'
@@ -200,6 +202,8 @@ Stmt		    :	VariableDef
                 |	PrintStmt ';'
                 |	BreakStmt ';'
                 |	StmtBlock
+                |	SwitchStmt
+                |	RepeatStmt ';'
                 |	ContinueStmt ';'
                 ;
 
@@ -389,6 +393,12 @@ WhileStmt       :	WHILE '(' Expr ')' Stmt
 					}
                 ;
 
+RepeatStmt		:	REPEAT Stmt UNTIL '(' Expr ')'
+					{
+						$$.stmt = new Tree.Repeat($2.stmt, $5.expr, $1.loc);
+					}
+				;
+
 ForStmt         :	FOR '(' SimpleStmt ';' Expr ';'	SimpleStmt ')' Stmt
 					{
 						$$.stmt = new Tree.ForLoop($3.stmt, $5.expr, $7.stmt, $9.stmt, $1.loc);
@@ -432,6 +442,39 @@ PrintStmt       :	PRINT '(' ExprList ')'
 						$$.stmt = new Print($3.elist, $1.loc);
 					}
                 ;
+                
+SwitchStmt		:	SWITCH '(' Expr ')' '{' CaseList DefaultStmt '}'
+					{
+						$$.stmt = new Tree.Switch($3.expr, $6.slist, $7.stmt, $1.loc);
+					}
+				;
+
+CaseList		:	CaseList CaseStmt
+					{
+						$$.slist.add($2.stmt);
+					}
+				|	/* empty */
+					{
+						$$ = new SemValue();
+                		$$.slist = new ArrayList<Tree>();
+					}
+				;
+
+CaseStmt		:	CASE Constant ':' StmtList
+					{
+						$$.stmt = new Tree.Case($2.expr, $4.slist, $1.loc);
+					}
+				;
+
+DefaultStmt		:	DEFAULT ':' StmtList
+					{
+						$$.stmt = new Tree.Default($3.slist, $1.loc);
+					}
+				|	/* empty */
+					{
+						$$ = new SemValue();
+					}
+				;
 
 ContinueStmt	:	CONTINUE
 					{

@@ -1,5 +1,8 @@
 eclipse.preferences.version=1
 encoding//TestCases/S2/runAll.py=utf-8
+encoding//src/decaf/error/BadCaseLabelError.java=UTF-8
+encoding//src/decaf/error/BadSwitchVarError.java=UTF-8
+encoding//src/decaf/error/BadTestExpr.java=UTF-8
 encoding//src/decaf/error/IncompatTerOpError.java=UTF-8
 encoding//src/decaf/frontend/BaseParser.java=UTF-8
 encoding//src/decaf/frontend/Lexer.l=UTF-8

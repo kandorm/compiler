@@ -231,6 +231,39 @@ public class BuildSym extends Tree.Visitor {
 			ifStmt.falseBranch.accept(this);
 		}
 	}
+	
+	@Override
+	public void visitSwitch(Tree.Switch switchStmt) {
+		for(Tree s : switchStmt.caseList) {
+			if(s != null) {
+				s.accept(this);
+			}
+		}
+	
+		if(switchStmt.defaultStmt != null) {
+			switchStmt.defaultStmt.accept(this);
+		}
+	}
+	
+	@Override
+	public void visitCase(Tree.Case caseStmt) {
+		
+		for(Tree s : caseStmt.slist) {
+			if(s != null) {
+				s.accept(this);
+			}
+		}
+	}
+	
+	@Override
+	public void visitDefault(Tree.Default defaultStmt) {
+		
+		for(Tree s : defaultStmt.slist) {
+			if(s != null) {
+				s.accept(this);
+			}
+		}
+	}
 
 	@Override
 	public void visitWhileLoop(Tree.WhileLoop whileLoop) {
@@ -312,4 +345,5 @@ public class BuildSym extends Tree.Visitor {
 		return type.getReturnType().equal(BaseType.VOID)
 				&& type.numOfParams() == 0 && ((Function) main).isStatik();
 	}
+	
 }
