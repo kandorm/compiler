@@ -32,6 +32,7 @@ import java.util.*;
 %token IDENTIFIER	  AND    OR    STATIC  INSTANCEOF
 %token LESS_EQUAL   GREATER_EQUAL  EQUAL   NOT_EQUAL
 %token PCLONE
+%token CONTINUE
 %token '+'  '-'  '*'  '/'  '%'  '='  '>'  '<'  '.'
 %token ','  ';'  '!'  '('  ')'  '['  ']'  '{'  '}'
 %token '?'	':'
@@ -199,6 +200,7 @@ Stmt		    :	VariableDef
                 |	PrintStmt ';'
                 |	BreakStmt ';'
                 |	StmtBlock
+                |	ContinueStmt ';'
                 ;
 
 SimpleStmt      :	LValue '=' Expr
@@ -428,6 +430,12 @@ ReturnStmt      :	RETURN Expr
 PrintStmt       :	PRINT '(' ExprList ')'
 					{
 						$$.stmt = new Print($3.elist, $1.loc);
+					}
+                ;
+
+ContinueStmt	:	CONTINUE
+					{
+						$$.stmt = new Tree.Continue($1.loc);
 					}
                 ;
 

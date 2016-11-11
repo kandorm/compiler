@@ -13,6 +13,7 @@ import decaf.type.*;
 import decaf.scope.*;
 import decaf.symbol.*;
 import decaf.symbol.Class;
+import decaf.tree.Tree.Continue;
 import decaf.tree.Tree.Expr;
 import decaf.tree.Tree.Ternary;
 import decaf.tree.Tree.Visitor;
@@ -678,6 +679,25 @@ public abstract class Tree {
     	@Override
     	public void printTo(IndentPrintWriter pw) {
     		pw.println("break");
+    	}
+    }
+    
+    /**
+     * A continue from a loop.
+     */
+    public static class Continue extends Tree {
+    	public Continue(Location loc) {
+            super(CONTINUE, loc);
+        }
+
+    	@Override
+        public void accept(Visitor v) {
+            v.visitContinue(this);
+        }
+
+    	@Override
+    	public void printTo(IndentPrintWriter pw) {
+    		pw.println("continue");
     	}
     }
 
@@ -1443,6 +1463,10 @@ public abstract class Tree {
 
         public void visitBreak(Break that) {
             visitTree(that);
+        }
+
+        public void visitContinue(Continue that) {
+        	visitTree(that);
         }
 
         public void visitReturn(Return that) {
