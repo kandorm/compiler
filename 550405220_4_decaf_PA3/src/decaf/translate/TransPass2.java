@@ -102,6 +102,22 @@ public class TransPass2 extends Tree.Visitor {
 			break;
 		}
 	}
+	
+	@Override
+	public void visitTernary(Tree.Ternary expr) {
+		expr.left.accept(this);
+		expr.val = tr.genLoadImm4(0);
+		Label falseLabel = Label.createLabel();
+		tr.genBeqz(expr.left.val, falseLabel);
+		expr.middle.accept(this);
+		tr.genAssign(expr.val, expr.middle.val);
+		Label exit = Label.createLabel();
+		tr.genBranch(exit);
+		tr.genMark(falseLabel);
+		expr.right.accept(this);
+		tr.genAssign(expr.val, expr.right.val);
+		tr.genMark(exit);
+	}
 
 	private void genEquNeq(Tree.Binary expr) {
 		if (expr.left.type.equal(BaseType.STRING)
@@ -342,7 +358,7 @@ public class TransPass2 extends Tree.Visitor {
 			tr.genMark(exit);
 		}
 	}
-
+	
 	@Override
 	public void visitNewArray(Tree.NewArray newArray) {
 		newArray.length.accept(this);
