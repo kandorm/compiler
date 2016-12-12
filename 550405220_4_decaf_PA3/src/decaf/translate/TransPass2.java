@@ -1,8 +1,11 @@
 package decaf.translate;
 
 import java.util.Stack;
+import java.util.ArrayList;
+import java.util.List;
 
 import decaf.tree.Tree;
+import decaf.tree.Tree.Case;
 import decaf.backend.OffsetCounter;
 import decaf.machdesc.Intrinsic;
 import decaf.symbol.Variable;
@@ -207,7 +210,7 @@ public class TransPass2 extends Tree.Visitor {
 			s.accept(this);
 		}
 	}
-
+	
 	@Override
 	public void visitThisExpr(Tree.ThisExpr thisExpr) {
 		thisExpr.val = currentThis;
@@ -366,6 +369,62 @@ public class TransPass2 extends Tree.Visitor {
 				ifStmt.trueBranch.accept(this);
 			}
 			tr.genMark(exit);
+		}
+	}
+	
+	@Override
+	public void visitSwitch(Tree.Switch switchStmt) {
+		switchStmt.condition.accept(this);
+		Label exit = Label.createLabel();
+		loopExits.push(exit);
+		
+		//init label
+		List<Label> caseLabelList = new ArrayList<Label>();
+		for (int i=0; i<switchStmt.caseList.size(); i++) {
+			Label caseLabel = Label.createLabel();
+			caseLabelList.add(caseLabel);
+		}
+		Label defaultLabel = Label.createLabel();
+		
+		//set branch
+		for(int i=0; i<switchStmt.caseList.size(); i++) {
+			Tree.Case caseStmt = (Tree.Case)switchStmt.caseList.get(i);
+			caseStmt.condition.accept(this);
+			Temp cond = tr.genEqu(switchStmt.condition.val, caseStmt.condition.val);
+			tr.genBnez(cond, caseLabelList.get(i));
+		}
+		if(switchStmt.defaultStmt != null) {
+			tr.genBranch(defaultLabel);
+		}
+		tr.genBranch(exit);
+		
+		//set statement of branch
+		for(int i=0; i<switchStmt.caseList.size(); i++) {
+			tr.genMark(caseLabelList.get(i));
+			switchStmt.caseList.get(i).accept(this);
+		}
+		if(switchStmt.defaultStmt != null) {
+			tr.genMark(defaultLabel);
+			switchStmt.defaultStmt.accept(this);
+		}
+		tr.genMark(exit);
+	}
+	
+	@Override
+	public void visitCase(Tree.Case caseStmt) {
+		for (Tree s : caseStmt.slist) {
+			if(s != null) {
+				s.accept(this);
+			}
+		}
+	}
+	
+	@Override
+	public void visitDefault(Tree.Default defaultStmt) {
+		for(Tree s : defaultStmt.slist) {
+			if(s != null) {
+				s.accept(this);
+			}
 		}
 	}
 	
