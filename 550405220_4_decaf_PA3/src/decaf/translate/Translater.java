@@ -180,12 +180,14 @@ public class Translater {
 	}
 
 	public Temp genDiv(Temp src1, Temp src2) {
+		genCheckDivisionByZero(src2);
 		Temp dst = Temp.createTempI4();
 		append(Tac.genDiv(dst, src1, src2));
 		return dst;
 	}
 
 	public Temp genMod(Temp src1, Temp src2) {
+		genCheckDivisionByZero(src2);
 		Temp dst = Temp.createTempI4();
 		append(Tac.genMod(dst, src1, src2));
 		return dst;
@@ -365,6 +367,17 @@ public class Translater {
 		Temp cond = genLes(size, genLoadImm4(0));
 		genBeqz(cond, exit);
 		Temp msg = genLoadStrConst(RuntimeError.NEGATIVE_ARR_SIZE);
+		genParm(msg);
+		genIntrinsicCall(Intrinsic.PRINT_STRING);
+		genIntrinsicCall(Intrinsic.HALT);
+		genMark(exit);
+	}
+	
+	public void genCheckDivisionByZero(Temp src) {
+		Label exit = Label.createLabel();
+		Temp cond = genEqu(src, genLoadImm4(0));
+		genBeqz(cond, exit);
+		Temp msg = genLoadStrConst(RuntimeError.DIVISION_BY_ZERO);
 		genParm(msg);
 		genIntrinsicCall(Intrinsic.PRINT_STRING);
 		genIntrinsicCall(Intrinsic.HALT);
