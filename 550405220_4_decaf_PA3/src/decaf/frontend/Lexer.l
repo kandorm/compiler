@@ -37,7 +37,7 @@ HEX_INTEGER			= (0[Xx]{HEX_DIGIT}+)
 DEC_INTEGER			= ({DIGIT}+)
 INTEGER				= ({HEX_INTEGER}|{DEC_INTEGER})
 IDENTIFIER			= ([A-Za-z][_0-9A-Za-z]*)
-SIMPLE_OPERATOR		= ("+"|"-"|"*"|"/"|"%"|"="|"<"|">"|"."|","|";"|"!"|"("|")"|"["|"]"|"{"|"}")
+SIMPLE_OPERATOR		= ("+"|"-"|"*"|"/"|"%"|"="|"<"|">"|"."|","|";"|"!"|"("|")"|"["|"]"|"{"|"}"|"?"|":")
 S_COMMENT			= ("//"[^\r\n]*{NEWLINE})
 WHITESPACE			= ([ \t]+)
 
@@ -72,6 +72,12 @@ WHITESPACE			= ([ \t]+)
 "ReadLine"			{ return keyword(Parser.READ_LINE);		}
 "static"			{ return keyword(Parser.STATIC);		}
 "instanceof"		{ return keyword(Parser.INSTANCEOF);	}
+"switch"			{ return keyword(Parser.SWITCH);		}
+"case"				{ return keyword(Parser.CASE);			}
+"default"			{ return keyword(Parser.DEFAULT);		}
+"repeat"			{ return keyword(Parser.REPEAT);		}
+"until"				{ return keyword(Parser.UNTIL);			}
+"continue"			{ return keyword(Parser.CONTINUE);		}
 
 	// 识别操作符的规则
 "<="				{ return operator(Parser.LESS_EQUAL);	}
@@ -80,6 +86,7 @@ WHITESPACE			= ([ \t]+)
 "!="				{ return operator(Parser.NOT_EQUAL);	}
 "&&"				{ return operator(Parser.AND);			}
 "||"				{ return operator(Parser.OR);			}
+"<<"				{ return operator(Parser.PCLONE);		}
 {SIMPLE_OPERATOR}	{ return operator((int)yycharat(0));	}
 
 	// 识别常数的规则

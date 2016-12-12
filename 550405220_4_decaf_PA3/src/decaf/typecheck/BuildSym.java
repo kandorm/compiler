@@ -227,9 +227,49 @@ public class BuildSym extends Tree.Visitor {
 	}
 
 	@Override
+	public void visitSwitch(Tree.Switch switchStmt) {
+		for(Tree s : switchStmt.caseList) {
+			if(s != null) {
+				s.accept(this);
+			}
+		}
+	
+		if(switchStmt.defaultStmt != null) {
+			switchStmt.defaultStmt.accept(this);
+		}
+	}
+	
+	@Override
+	public void visitCase(Tree.Case caseStmt) {
+		
+		for(Tree s : caseStmt.slist) {
+			if(s != null) {
+				s.accept(this);
+			}
+		}
+	}
+	
+	@Override
+	public void visitDefault(Tree.Default defaultStmt) {
+		
+		for(Tree s : defaultStmt.slist) {
+			if(s != null) {
+				s.accept(this);
+			}
+		}
+	}
+	
+	@Override
 	public void visitWhileLoop(Tree.WhileLoop whileLoop) {
 		if (whileLoop.loopBody != null) {
 			whileLoop.loopBody.accept(this);
+		}
+	}
+	
+	@Override
+	public void visitRepeat(Tree.Repeat repeatLoop) {
+		if (repeatLoop.repeatStmt != null) {
+			repeatLoop.repeatStmt.accept(this);
 		}
 	}
 

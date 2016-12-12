@@ -10,18 +10,22 @@ import decaf.tree.Tree;
 import decaf.error.BadArgCountError;
 import decaf.error.BadArgTypeError;
 import decaf.error.BadArrElementError;
+import decaf.error.BadCaseLabelError;
 import decaf.error.BadLengthArgError;
 import decaf.error.BadLengthError;
 import decaf.error.BadNewArrayLength;
 import decaf.error.BadPrintArgError;
 import decaf.error.BadReturnTypeError;
+import decaf.error.BadSwitchVarError;
 import decaf.error.BadTestExpr;
 import decaf.error.BreakOutOfLoopError;
 import decaf.error.ClassNotFoundError;
+import decaf.error.ContinueOutOfLoopError;
 import decaf.error.DecafError;
 import decaf.error.FieldNotAccessError;
 import decaf.error.FieldNotFoundError;
 import decaf.error.IncompatBinOpError;
+import decaf.error.IncompatTerOpError;
 import decaf.error.IncompatUnOpError;
 import decaf.error.NotArrayError;
 import decaf.error.NotClassError;
@@ -49,11 +53,14 @@ public class TypeCheck extends Tree.Visitor {
 
 	private Stack<Tree> breaks;
 
+	private Stack<Tree> continues;
+	
 	private Function currentFunction;
 
 	public TypeCheck(ScopeStack table) {
 		this.table = table;
 		breaks = new Stack<Tree>();
+		continues = new Stack<Tree>();
 	}
 
 	public static void checkType(Tree.TopLevel tree) {
@@ -63,6 +70,11 @@ public class TypeCheck extends Tree.Visitor {
 	@Override
 	public void visitBinary(Tree.Binary expr) {
 		expr.type = checkBinaryOp(expr.left, expr.right, expr.tag, expr.loc);
+	}
+	
+	@Override
+	public void visitTernary(Tree.Ternary expr) {
+		expr.type = checkTernaryOp(expr.left, expr.middle, expr.right, expr.tag, expr.loc);
 	}
 
 	@Override
@@ -454,6 +466,13 @@ public class TypeCheck extends Tree.Visitor {
 			issueError(new BreakOutOfLoopError(breakStmt.getLocation()));
 		}
 	}
+	
+	@Override
+	public void visitContinue(Tree.Continue continueStmt) {
+		if (continues.empty()) {
+			issueError(new ContinueOutOfLoopError(continueStmt.getLocation()));
+		}
+	}
 
 	@Override
 	public void visitForLoop(Tree.ForLoop forLoop) {
@@ -465,10 +484,12 @@ public class TypeCheck extends Tree.Visitor {
 			forLoop.update.accept(this);
 		}
 		breaks.add(forLoop);
+		continues.add(forLoop);
 		if (forLoop.loopBody != null) {
 			forLoop.loopBody.accept(this);
 		}
 		breaks.pop();
+		continues.pop();
 	}
 
 	@Override
@@ -480,6 +501,52 @@ public class TypeCheck extends Tree.Visitor {
 		if (ifStmt.falseBranch != null) {
 			ifStmt.falseBranch.accept(this);
 		}
+	}
+	
+	@Override
+	public void visitSwitch(Tree.Switch switchStmt) {
+		
+		if(switchStmt.condition != null) {
+			checkSwitchVar(switchStmt.condition);
+		}
+		
+		for(Tree s : switchStmt.caseList) {
+			if(s != null) {
+				s.accept(this);
+			}
+		}
+	
+		if(switchStmt.defaultStmt != null) {
+			switchStmt.defaultStmt.accept(this);
+		}
+	}
+	
+	
+	@Override
+	public void visitCase(Tree.Case caseStmt) {
+		
+		if(caseStmt.condition != null) {
+			checkCaseLabel(caseStmt.condition);
+		}
+		breaks.add(caseStmt);
+		for(Tree s : caseStmt.slist) {
+			if(s != null) {
+				s.accept(this);
+			}
+		}
+		breaks.pop();
+	}
+	
+	@Override
+	public void visitDefault(Tree.Default defaultStmt) {
+		
+		breaks.add(defaultStmt);
+		for(Tree s : defaultStmt.slist) {
+			if(s != null) {
+				s.accept(this);
+			}
+		}
+		breaks.pop();
 	}
 
 	@Override
@@ -523,10 +590,24 @@ public class TypeCheck extends Tree.Visitor {
 	public void visitWhileLoop(Tree.WhileLoop whileLoop) {
 		checkTestExpr(whileLoop.condition);
 		breaks.add(whileLoop);
+		continues.add(whileLoop);
 		if (whileLoop.loopBody != null) {
 			whileLoop.loopBody.accept(this);
 		}
 		breaks.pop();
+		continues.pop();
+	}
+	
+	@Override
+	public void visitRepeat(Tree.Repeat repeatLoop) {
+		breaks.add(repeatLoop);
+		continues.add(repeatLoop);
+		if (repeatLoop.repeatStmt != null) {
+			repeatLoop.repeatStmt.accept(this);
+		}
+		breaks.pop();
+		continues.pop();
+		checkTestExpr(repeatLoop.condition);
 	}
 
 	// visiting types
@@ -589,6 +670,8 @@ public class TypeCheck extends Tree.Visitor {
 				return left.type;
 			case Tree.MOD:
 				return BaseType.INT;
+			case Tree.PCLONE:
+				return BaseType.ERROR;
 			default:
 				return BaseType.BOOL;
 			}
@@ -630,6 +713,18 @@ public class TypeCheck extends Tree.Visitor {
 					&& right.type.equal(BaseType.BOOL);
 			returnType = BaseType.BOOL;
 			break;
+		case Tree.PCLONE:
+			if(left.type.isClassType() && right.type.isClassType()) {
+				ClassType tempType = (ClassType)left.type;
+				while(tempType != null) {
+					if(right.type.compatible(tempType)) {
+						compatible = true;
+						returnType = tempType;
+						break;
+					}
+					tempType = tempType.getParentType();
+				}
+			}
 		default:
 			break;
 		}
@@ -641,11 +736,54 @@ public class TypeCheck extends Tree.Visitor {
 		return returnType;
 	}
 
+	private Type checkTernaryOp(Tree.Expr left, Tree.Expr middle, Tree.Expr right, int op, Location location) {
+		left.accept(this);
+		middle.accept(this);
+		right.accept(this);
+		
+		checkTestExpr(left);
+		boolean compatible = false;
+		Type returnType = BaseType.ERROR;
+		switch(op) {
+			case Tree.COND:
+				compatible = middle.type.equal(right.type);
+				if(compatible)
+					returnType = middle.type;
+				break;
+			default:
+				break;
+		}
+		
+		if(!middle.type.equal(BaseType.ERROR) && 
+		   !right.type.equal(BaseType.ERROR) &&
+		   !compatible) {
+				issueError(new IncompatTerOpError(location, middle.type.toString(), 
+						right.type.toString()));
+		}
+		return returnType;
+		
+	}
+	
 	private void checkTestExpr(Tree.Expr expr) {
 		expr.accept(this);
 		if (!expr.type.equal(BaseType.ERROR) && !expr.type.equal(BaseType.BOOL)) {
 			issueError(new BadTestExpr(expr.getLocation()));
 		}
+	}
+	
+	private void checkSwitchVar(Tree.Expr expr) {
+		expr.accept(this);
+		if(!expr.type.equal(BaseType.ERROR) && !expr.type.equal(BaseType.INT)) {
+			issueError(new BadSwitchVarError(expr.getLocation()));
+		}
+	}
+	
+	private void checkCaseLabel(Tree.Expr expr) {
+		expr.accept(this);
+		if(!expr.type.equal(BaseType.ERROR) && ((Tree.Literal)expr).typeTag != Tree.INT) {
+			issueError(new BadCaseLabelError(expr.getLocation()));
+		}
+		
 	}
 
 }
