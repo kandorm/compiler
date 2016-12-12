@@ -17,10 +17,13 @@ public class TransPass2 extends Tree.Visitor {
 	private Temp currentThis;
 
 	private Stack<Label> loopExits;
+	
+	private Stack<Label> loopEnds;
 
 	public TransPass2(Translater tr) {
 		this.tr = tr;
 		loopExits = new Stack<Label>();
+		loopEnds = new Stack<Label>();
 	}
 
 	@Override
@@ -278,7 +281,12 @@ public class TransPass2 extends Tree.Visitor {
 	public void visitBreak(Tree.Break breakStmt) {
 		tr.genBranch(loopExits.peek());
 	}
-
+	
+	@Override
+	public void visitContinue(Tree.Continue continueStmt) {
+		tr.genBranch(loopEnds.peek());
+	}
+	
 	@Override
 	public void visitCallExpr(Tree.CallExpr callExpr) {
 		if (callExpr.isArrayLength) {
@@ -329,11 +337,13 @@ public class TransPass2 extends Tree.Visitor {
 		Label exit = Label.createLabel();
 		tr.genBeqz(forLoop.condition.val, exit);
 		loopExits.push(exit);
+		loopEnds.push(loop);
 		if (forLoop.loopBody != null) {
 			forLoop.loopBody.accept(this);
 		}
 		tr.genBranch(loop);
 		loopExits.pop();
+		loopEnds.pop();
 		tr.genMark(exit);
 	}
 
@@ -379,14 +389,36 @@ public class TransPass2 extends Tree.Visitor {
 		Label exit = Label.createLabel();
 		tr.genBeqz(whileLoop.condition.val, exit);
 		loopExits.push(exit);
+		loopEnds.push(loop);
 		if (whileLoop.loopBody != null) {
 			whileLoop.loopBody.accept(this);
 		}
 		tr.genBranch(loop);
 		loopExits.pop();
+		loopEnds.pop();
 		tr.genMark(exit);
 	}
-
+	
+	@Override
+	public void visitRepeat(Tree.Repeat repeatLoop) {
+		Label loop = Label.createLabel();
+		Label loopEnd = Label.createLabel();
+		tr.genMark(loop);
+		Label exit = Label.createLabel();
+		loopExits.push(exit);
+		loopEnds.push(loopEnd);
+		if(repeatLoop.repeatStmt != null) {
+			repeatLoop.repeatStmt.accept(this);
+		}
+		tr.genMark(loopEnd);
+		repeatLoop.condition.accept(this);
+		tr.genBnez(repeatLoop.condition.val, exit);
+		tr.genBranch(loop);
+		tr.genMark(exit);
+		loopExits.pop();
+		loopEnds.pop();
+	}
+	
 	@Override
 	public void visitTypeTest(Tree.TypeTest typeTest) {
 		typeTest.instance.accept(this);
