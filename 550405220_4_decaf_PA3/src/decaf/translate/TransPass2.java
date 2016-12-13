@@ -1,16 +1,20 @@
 package decaf.translate;
 
 import java.util.Stack;
+
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import decaf.tree.Tree;
-import decaf.tree.Tree.Case;
 import decaf.backend.OffsetCounter;
 import decaf.machdesc.Intrinsic;
 import decaf.symbol.Variable;
+import decaf.symbol.Class;
 import decaf.tac.Label;
 import decaf.tac.Temp;
+import decaf.tac.VTable;
 import decaf.type.BaseType;
 
 public class TransPass2 extends Tree.Visitor {
@@ -22,6 +26,8 @@ public class TransPass2 extends Tree.Visitor {
 	private Stack<Label> loopExits;
 	
 	private Stack<Label> loopEnds;
+	
+	private Map<String, Integer> map = new HashMap<String, Integer>();
 
 	public TransPass2(Translater tr) {
 		this.tr = tr;
@@ -52,6 +58,7 @@ public class TransPass2 extends Tree.Visitor {
 	public void visitTopLevel(Tree.TopLevel program) {
 		for (Tree.ClassDef cd : program.classes) {
 			cd.accept(this);
+			map.put(cd.symbol.getName(), cd.symbol.getSize());
 		}
 	}
 
@@ -106,6 +113,9 @@ public class TransPass2 extends Tree.Visitor {
 		case Tree.NE:
 			genEquNeq(expr);
 			break;
+		case Tree.PCLONE:
+			genPclone(expr);
+			break;
 		}
 	}
 	
@@ -142,7 +152,71 @@ public class TransPass2 extends Tree.Visitor {
 				expr.val = tr.genNeq(expr.left.val, expr.right.val);
 		}
 	}
+	
+	private void genPclone(Tree.Binary expr) {
+		//find min common parent
+		Label leftExit = Label.createLabel();
+		Label leftLoop = Label.createLabel();
+		Label rightLoop = Label.createLabel();
+		Label rightExit = Label.createLabel();
+		Temp leftVtable = tr.genLoad(expr.left.val, 0);
+		tr.genMark(leftLoop);
+		tr.genBeqz(leftVtable, leftExit);
+		Temp rightVtable = tr.genLoad(expr.right.val, 0);
+		tr.genMark(rightLoop);
+		tr.genBeqz(rightVtable, rightExit);
+		Temp cond = tr.genEqu(leftVtable, rightVtable);
+		tr.genBnez(cond, leftExit);
+		tr.genAssign(rightVtable, tr.genLoad(rightVtable, 0));
+		tr.genBranch(rightLoop);
+		tr.genMark(rightExit);
+		tr.genAssign(leftVtable, tr.genLoad(leftVtable, 0));
+		tr.genBranch(leftLoop);
+		tr.genMark(leftExit);
+		
+		//create new class for dst
+		List<VTable> vtableList = tr.getVtables();
+		Temp lvtableAddr = tr.genLoad(expr.left.val, 0);
+		Label findTarget = Label.createLabel();
+		Temp commonParent = Temp.createTempI4();
+		Temp size = Temp.createTempI4();
+		for(VTable vtable : vtableList) {
+			if(map.get(vtable.className) != null) {
+				Label vtableLabel = Label.createLabel();
+				Temp vtableAddr = tr.genLoadVTable(vtable);
+				Temp vtablecond = tr.genEqu(lvtableAddr, vtableAddr);
+				tr.genBeqz(vtablecond, vtableLabel);
+				tr.genAssign(size, Temp.createConstTemp(map.get(vtable.className)));
+				tr.genParm(size);
+				tr.genAssign(commonParent, tr.genDirectCall(Intrinsic.ALLOCATE.label, expr.left.type));
+				tr.genBranch(findTarget);
+				tr.genMark(vtableLabel);
+			}
+		}
+		tr.genMark(findTarget);
+		
+		//copy a's variable to dst
+		Label copyLabel = Label.createLabel();
+		Temp srcpos = Temp.createTempI4();
+		Temp dstpos = Temp.createTempI4();
+		Temp offset = Temp.createTempI4();
+		tr.genAssign(offset, Temp.createConstTemp(4));
+		tr.genAssign(srcpos, expr.left.val);
+		tr.genAssign(dstpos, commonParent);
+		tr.genMark(copyLabel);
+		tr.genStore(tr.genLoad(srcpos, 0), dstpos, 0);
+		tr.genAssign(srcpos, tr.genAdd(srcpos, offset));
+		tr.genAssign(dstpos, tr.genAdd(dstpos, offset));
+		tr.genAssign(size, tr.genSub(size, offset));
+		tr.genBnez(size, copyLabel);
+		
+		//change dst's vtable to common parent vtable
+		tr.genStore(leftVtable, commonParent, 0);
+		expr.val = commonParent;
 
+		
+	}
+	
 	@Override
 	public void visitAssign(Tree.Assign assign) {
 		assign.left.accept(this);
@@ -378,7 +452,7 @@ public class TransPass2 extends Tree.Visitor {
 		Label exit = Label.createLabel();
 		loopExits.push(exit);
 		
-		//init label
+		//initial label
 		List<Label> caseLabelList = new ArrayList<Label>();
 		for (int i=0; i<switchStmt.caseList.size(); i++) {
 			Label caseLabel = Label.createLabel();
