@@ -482,6 +482,7 @@ public class TransPass2 extends Tree.Visitor {
 			switchStmt.defaultStmt.accept(this);
 		}
 		tr.genMark(exit);
+		loopExits.pop();
 	}
 	
 	@Override
