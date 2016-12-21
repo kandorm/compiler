@@ -175,25 +175,13 @@ public class TransPass2 extends Tree.Visitor {
 		tr.genMark(leftExit);
 		
 		//create new class for dst
-		List<VTable> vtableList = tr.getVtables();
-		Temp lvtableAddr = tr.genLoad(expr.left.val, 0);
-		Label findTarget = Label.createLabel();
 		Temp commonParent = Temp.createTempI4();
-		Temp size = Temp.createTempI4();
-		for(VTable vtable : vtableList) {
-			if(map.get(vtable.className) != null) {
-				Label vtableLabel = Label.createLabel();
-				Temp vtableAddr = tr.genLoadVTable(vtable);
-				Temp vtablecond = tr.genEqu(lvtableAddr, vtableAddr);
-				tr.genBeqz(vtablecond, vtableLabel);
-				tr.genAssign(size, Temp.createConstTemp(map.get(vtable.className)));
-				tr.genParm(size);
-				tr.genAssign(commonParent, tr.genDirectCall(Intrinsic.ALLOCATE.label, expr.left.type));
-				tr.genBranch(findTarget);
-				tr.genMark(vtableLabel);
-			}
-		}
-		tr.genMark(findTarget);
+		Temp size = tr.genLoad(leftVtable, 4);
+		Temp mul = Temp.createTempI4();
+		tr.genAssign(mul, Temp.createConstTemp(4));
+		tr.genAssign(size, tr.genMul(size, mul));
+		tr.genParm(size);
+		tr.genAssign(commonParent, tr.genDirectCall(Intrinsic.ALLOCATE.label, expr.left.type));
 		
 		//copy a's variable to dst
 		Label copyLabel = Label.createLabel();
